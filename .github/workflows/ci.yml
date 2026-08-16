@@ -22,7 +22,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install -U pip
-          pip install -e ".[dev,models,bench]"
+          pip install -e ".[dev,models,bench,app]"
 
       # PARITY_OFFLINE keeps the suite honest: it must pass with no network and
       # no model downloads, against the fixture model in parity/tiny.py.
@@ -45,5 +45,12 @@ jobs:
           PARITY_OFFLINE: "1"
         run: python -m benchmarks.run --demo --langs ja --budget 32 --train-steps 20 --out /tmp/run
 
-      - name: Space imports on CPU
-        run: python -c "import app; app.build_ui()"
+      # The published Space is static/, checked by tests/test_space.py.
+      # app.py is the Gradio reference demo; it must still import and build.
+      - name: Gradio reference app builds
+        run: python -c "import app; app.build_ui(); print('ok')"
+
+      - name: Static Space assets are in sync
+        run: |
+          python scripts/build_space_assets.py
+          git diff --exit-code -- space/
