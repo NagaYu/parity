@@ -282,6 +282,89 @@ on the order of 10⁷ tokens; point the CLI at one with
 `PARITY_MINING_CORPUS_JA=/path/to/corpus.txt`. Parity refuses under-evidenced tokens rather
 than shipping them, so a small corpus yields a small pack, never a weak guarantee.
 
+## Measured results
+
+Everything below is measured, not projected. The build ran on CPU;
+`runs/` holds the manifests.
+
+### Fertility, and what a pack recovers
+
+The atlas table above is the baseline. What Parity recovers from it is the part
+that has to be earned, and here is what it actually earned.
+
+### The drift study — SmolLM2-135M, Japanese
+
+The interesting result of this project is a negative one, and it is worth more
+than a flattering number would be.
+
+Setup: OPUS-100 Japanese, 40 000 lines split four ways; 2 436 candidates mined
+from 573 k tokens; a 96-candidate shortlist that covers **30.3%** of the corpus's
+tokens (certified optimality ≥ 0.785 of the best shortlist that size).
+
+| synthesis | median next-token KL | 95/95 tail bound (median) | best token |
+| --- | ---: | ---: | ---: |
+| composition only — condition (C) | 0.196 | 2.72 | 1.87 |
+| subspace Gauss-Newton, `q=8`, 2 iters | 0.196 | 2.64 | 1.63 |
+| subspace, `q=24`, 4 iters | 0.221 | 1.95 | 1.35 |
+| **+ full-dimension refinement (`gn+adam`)** | **0.053** | **1.04** | **0.13** |
+
+Two things follow, both of which changed the code:
+
+1. **The subspace restriction was the binding constraint, not the iteration
+   count.** Widening `q` from 8 to 24 and quadrupling iterations barely moved the
+   bound; adding a full-dimension refinement cut the median KL by 5x. So
+   `--solver gn+adam` is the recommended setting for real models, and the
+   docstring on `_adam_refine` records these numbers rather than an intuition.
+   The fixture model does *not* show this — its geometry is nearly linear in the
+   embedding — which is why the default is documented from the real measurement.
+
+2. **The certificate then refused almost everything.** At a 0.35-nat tolerance,
+   **2 of 96** candidates were adopted: 83 refused for KL drift, 7 for total
+   variation, 4 for off-context firing. The resulting pack saves 0.5% of tokens.
+
+The two that survived are `か？` and `れる` — short, idiomatic, highly
+predictable. The candidates with the *largest* raw saving are single high-frequency
+particles (`た`, `は`, `か`), and they are the worst possible merges: maximal
+contextual variability, so no single embedding reproduces the expansion across
+contexts.
+
+**What this means.** On a 135M English-centric model, aggressive byte-level
+Japanese merges cannot be certified at a bar worth having. That is a real limit
+of frozen-model vocabulary augmentation at this scale, and the certificate is
+what surfaced it — a method without one would have shipped all 96 tokens and
+reported a 30% saving. Two directions the study points at: models whose
+target-language representations are already better structured (Qwen2.5 tokenizes
+Japanese at 1.22x, so its internal Japanese is not byte soup), and merges chosen
+for *predictability* rather than raw frequency.
+
+Published pack: [`NagaYu/parity-ja-smollm2-135m`](https://huggingface.co/NagaYu/parity-ja-smollm2-135m)
+— 2 tokens, certified KL ≤ 0.099 nats at (95%, 95%). It is published as a
+demonstration of the artefact format and of this negative result, and its model
+card says so.
+
+### Cost
+
+| | FLOPs | wall-clock |
+| --- | ---: | ---: |
+| Parity build (96 candidates, `gn+adam`) | 3.5e14 | 65 min, CPU |
+| continued pretraining at 1B tokens, same model | 8.1e17 | — (extrapolated) |
+
+**~2 300x cheaper** than the published-scale baseline. Synthesis dominates
+(3 731 s); certification is 148 s, because the negative probe and the batched
+measurement amortise across all candidates.
+
+### Tied embeddings, and input-only packs
+
+SmolLM2-135M ties its input and output embeddings, so one vector must both
+reproduce the expansion's internal state *and* carry the right emission
+probability — two objectives that do not generally have a common solution. Parity
+handles this with an **input-only** pack (`--input-only`): pack tokens are
+readable but masked out of the sampler, so emission drift is zero by
+construction rather than bounded by measurement. Prompt tokens are where the
+saving is, and generation continues to emit base tokens that decode to the same
+strings.
+
+
 ## Use
 
 ```python

@@ -171,6 +171,9 @@ class MultiTokenizerRouter:
         self._views: Dict[str, TokenizerView] = {"base": BASE_VIEW}
         for lang in tokenizer.packs():
             self._views[lang] = tokenizer.view(lang)
+            # Every pack also gets a read-only view. On tied-embedding models
+            # this is the one to serve; see TokenizerView.input_only.
+            self._views[f"{lang}:in"] = tokenizer.view(lang, input_only=True)
         if adapter.vocab_size() != tokenizer.total_vocab_size:
             raise ValueError(
                 f"model has {adapter.vocab_size()} embedding rows but the tokenizer expects "
@@ -238,7 +241,10 @@ class MultiTokenizerRouter:
         V = self.tok.total_vocab_size
         mask = torch.zeros(V, dtype=torch.float32)
         v = self.view(name)
-        if v.allowed_ids is None:
+        if v.allowed_ids is None or v.input_only:
+            # Base view, or a read-only pack view: the sampler sees base ids only.
+            # For an input-only view this is what makes emission drift zero rather
+            # than merely bounded — the token is readable and unemittable.
             mask[self.tok.base_vocab_size :] = NEG_INF
         else:
             allowed = torch.zeros(V, dtype=torch.bool)

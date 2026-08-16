@@ -151,6 +151,19 @@
   <pre><code>pip install git+https://github.com/NagaYu/parity
 parity build --model Qwen/Qwen2.5-0.5B-Instruct --lang ja --budget 8000</code></pre>
 
+  <h2>What the measurement actually found</h2>
+  <p>On SmolLM2-135M with Japanese, 96 candidates covering 30% of the corpus's tokens were
+  synthesised and certified. At a 0.35-nat drift tolerance, <strong>2 were adopted</strong>
+  — <code>か？</code> and <code>れる</code>, both short and highly predictable. The rest were
+  refused: 83 for next-token drift, 7 for total variation, 4 for firing off-context.</p>
+  <p>That is a negative result, and it is the point of having a certificate. A method without
+  one would have shipped all 96 tokens and reported a 30% saving. The candidates with the
+  largest raw saving are single high-frequency particles (<code>た</code>, <code>は</code>),
+  and they are the worst possible merges — maximal contextual variability, so no single
+  embedding reproduces them everywhere. Full numbers, including the solver ablation that
+  cut median drift 5x, are in the
+  <a href="https://github.com/NagaYu/parity#measured-results">repository README</a>.</p>
+
   <h2>Scope</h2>
   <p class="foot"><strong>Applies to</strong> open-weight models and the providers serving
   them — Parity needs write access to the embedding matrix.

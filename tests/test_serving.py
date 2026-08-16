@@ -18,10 +18,12 @@ from parity.serving import MultiTokenizerRouter, Request
 from parity.serving.prefix_cache import PrefixCache, clone_kv, crop_kv, kv_length
 
 
-def test_views_are_registered_and_masks_are_disjoint(router, attached):
+def test_views_are_registered_and_masks_are_disjoint(router, attached, sample):
+    sample_ja_text = sample.by_lang["ja"][0]
     V = attached["tokenizer"].base_vocab_size
     total = attached["tokenizer"].total_vocab_size
-    assert router.views() == ["base", "ja"]
+    # Each pack gets both a full view and a read-only ("lang:in") view.
+    assert router.views() == ["base", "ja", "ja:in"]
 
     base_mask = router.logit_mask("base")
     ja_mask = router.logit_mask("ja")
@@ -29,6 +31,13 @@ def test_views_are_registered_and_masks_are_disjoint(router, attached):
     assert torch.isinf(base_mask[V:]).all()
     assert not torch.isinf(base_mask[:V]).any()
     assert not torch.isinf(ja_mask).any(), "the ja view should reach every id"
+
+    # The read-only view reads pack ids but must never emit one. On a tied model
+    # this is what makes emission drift zero rather than merely bounded.
+    in_mask = router.logit_mask("ja:in")
+    assert torch.isinf(in_mask[V:]).all()
+    assert not torch.isinf(in_mask[:V]).any()
+    assert router.encode(sample_ja_text, "ja:in") == router.encode(sample_ja_text, "ja")
 
 
 def test_batched_generation_matches_isolated_generation(router, sample):

@@ -289,6 +289,20 @@ class CertifierConfig:
     max_offcontext_mass: float = 0.01
     #: Positions sampled for the off-context probe.  One forward pass total.
     offcontext_positions: int = 512
+    #: Build an **input-only** pack: its tokens are readable but never emitted.
+    #:
+    #: Set this when the model ties its embeddings. There the input row is also
+    #: the output row, so "reproduce the expansion's internal state" and "be
+    #: emitted with the expansion's probability" are two objectives on one
+    #: vector, and satisfying both is not generally possible. Declining to emit
+    #: drops the second objective, which makes emission drift **zero by
+    #: construction** instead of a number to bound — and costs almost nothing,
+    #: since prompt tokens are where the saving is and generation still produces
+    #: base tokens that decode to the same strings.
+    #:
+    #: The serving side enforces it: `MultiTokenizerRouter` masks pack ids out of
+    #: the sampler for a `lang:in` view.
+    input_only: bool = False
     min_calibration: int = 12
     keep_observations: bool = True
     max_batch: int = 64
@@ -596,6 +610,10 @@ class DriftCertifier:
                 "(the token would steal probability where it does not belong)"
             )
         emit = bounds.get("emit_logprob_err")
+        if cfg.input_only:
+            # The token is never emitted, so its emission drift is not a risk
+            # this pack carries. The measurement is still recorded in `observed`.
+            emit = None
         if emit is not None and not math.isfinite(emit.value):
             if cfg.require_emit_bound:
                 need = _samples_needed(cfg.alpha, cfg.delta)

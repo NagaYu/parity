@@ -310,6 +310,19 @@ class TokenizerView:
     name: str
     pack_langs: Tuple[str, ...] = ()
     allowed_ids: Optional[frozenset] = None  # None == base ids only
+    #: When true the view *reads* pack tokens but may never *emit* them.
+    #:
+    #: This is the right mode for a model with **tied** embeddings, where the
+    #: input row is also the output row and the two objectives compete: an
+    #: embedding that reproduces the expansion's internal state is not generally
+    #: the one that gives the token the right emission probability. Refusing to
+    #: emit removes the second objective entirely, so emission drift is zero by
+    #: construction rather than bounded by measurement.
+    #:
+    #: The saving is essentially unaffected. Prompt tokens are where the cost is,
+    #: and generation continues to use base tokens — which decode to exactly the
+    #: same strings.
+    input_only: bool = False
 
     @property
     def is_base(self) -> bool:
@@ -441,8 +454,12 @@ class AugmentedTokenizer:
         """
         return sorted(self._packs)
 
-    def view(self, *langs: str) -> TokenizerView:
+    def view(self, *langs: str, input_only: bool = False) -> TokenizerView:
         """Build a view enabling the named packs (none == the base view).
+
+        ``input_only=True`` lets the view read pack tokens but never emit them;
+        see :attr:`TokenizerView.input_only` for why that is the right default
+        on tied-embedding models.
 
         Claim: non-regression.
         """
@@ -453,7 +470,8 @@ class AugmentedTokenizer:
         if not langs:
             return BASE_VIEW
         allowed = frozenset(range(self.base_vocab_size)) | frozenset(i for l in langs for i in self._packs[l])
-        return TokenizerView("+".join(langs), langs, allowed)
+        name = "+".join(langs) + (":in" if input_only else "")
+        return TokenizerView(name, langs, allowed, input_only=input_only)
 
     def _trie_for(self, view: TokenizerView) -> Optional[MergeTrie]:
         if view.is_base:

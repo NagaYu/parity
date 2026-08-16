@@ -107,12 +107,14 @@ def cmd_build(args) -> int:
             subspace_dim=args.subspace_dim,
             gn_iters=args.gn_iters,
             max_contexts=args.contexts,
+            adam_steps=args.adam_steps,
         ),
         certifier=CertifierConfig(
             max_kl=args.max_kl,
             max_tv=args.max_tv,
             max_emit_logprob_err=args.max_emit_err,
             max_offcontext_mass=args.max_offcontext_mass,
+            input_only=args.input_only,
             alpha=args.alpha,
             delta=args.delta,
         ),
@@ -141,6 +143,8 @@ def cmd_build(args) -> int:
     print(f"  optimality (certified) >= {result.selection.certified_optimality_ratio:.3f} of the best pack this size")
     print(f"  build cost            {result.total_flops:.3e} FLOPs, {result.total_seconds:.1f}s")
     print(f"  English               unchanged by construction (append-only rows + base-view mask)")
+    if args.input_only:
+        print("  emission              zero drift by construction (input-only pack: readable, never emitted)")
     rejected = result.rejection_reasons()
     if rejected:
         print("  candidates refused:")
@@ -333,10 +337,13 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--solver", default="gn", choices=["composition", "gn", "gn+adam"])
     b.add_argument("--subspace-dim", type=int, default=8)
     b.add_argument("--gn-iters", type=int, default=2)
+    b.add_argument("--adam-steps", type=int, default=0, help="full-dimension refinement steps (see --solver gn+adam)")
     b.add_argument("--contexts", type=int, default=8)
     b.add_argument("--max-kl", type=float, default=0.05, help="drift tolerance, nats")
     b.add_argument("--max-tv", type=float, default=0.05)
     b.add_argument("--max-emit-err", type=float, default=0.75, help="emission log-prob tolerance, nats")
+    b.add_argument("--input-only", action="store_true",
+                   help="pack tokens are readable but never emitted (recommended for tied-embedding models)")
     b.add_argument("--max-offcontext-mass", type=float, default=0.01, help="max probability the token may take off-context")
     b.add_argument("--certify-contexts", type=int, default=64, help="held-out occurrences per candidate")
     b.add_argument("--alpha", type=float, default=0.05, help="tail fraction the bound must cover")
@@ -374,6 +381,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--solver", default="gn", choices=["composition", "gn", "gn+adam"])
     d.add_argument("--subspace-dim", type=int, default=6)
     d.add_argument("--gn-iters", type=int, default=2)
+    d.add_argument("--adam-steps", type=int, default=0)
     d.add_argument("--contexts", type=int, default=6)
     # The fixture model is untrained, so its residual-stream geometry is far
     # noisier than a real checkpoint's. The demo therefore runs at a deliberately
@@ -382,6 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--max-tv", type=float, default=0.6)
     d.add_argument("--max-emit-err", type=float, default=40.0)
     d.add_argument("--max-offcontext-mass", type=float, default=0.05)
+    d.add_argument("--input-only", action="store_true")
     d.add_argument("--certify-contexts", type=int, default=32)
     d.add_argument("--alpha", type=float, default=0.2)
     d.add_argument("--delta", type=float, default=0.2)

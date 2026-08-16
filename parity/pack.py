@@ -207,11 +207,15 @@ tags:
 - parity-vocab-pack
 ---"""
 
+    caveat = md.get("caveat")
+    caveat_block = f"\n> {caveat}\n" if caveat else ""
+
     return f"""{frontmatter}
 
 # Parity vocabulary pack — `{lang}` for `{pack.base_model_id}`
 
 **{n} new tokens. No continued pretraining. Certified drift.**
+{caveat_block}
 
 This pack adds {n} tokens to `{pack.base_model_id}` so that {lang} text costs
 fewer tokens to read and write. The base model's weights are unchanged: the pack

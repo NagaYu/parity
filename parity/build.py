@@ -419,6 +419,7 @@ def build_pack(
             "token_reduction": result.token_reduction,
             "added_parameters": adapter.embedding_param_cost(len(entries)),
             "solver": config.synthesis.solver,
+            "input_only": config.certifier.input_only,
             "mining_corpus": f"{corpus.source} ({len(splits.mine)} lines)",
             "calibration_corpus": f"{corpus.source} ({len(splits.certify)} lines, held out)",
             "build_flops": f"{build.total_flops:.3e}",
