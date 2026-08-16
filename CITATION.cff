@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: "Parity: certified vocabulary augmentation without continued pretraining"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - name: "Parity contributors"
+repository-code: "https://github.com/NagaYu/parity"
+url: "https://huggingface.co/spaces/NagaYu/parity"
+abstract: >-
+  Parity adds language-specific tokens to an already-trained open-weight
+  language model, synthesises their embeddings from the model's own internal
+  representations by subspace-restricted Gauss-Newton least squares, and ships a
+  distribution-free certificate bounding how far the model's behaviour can move.
+  No continued pretraining is performed; every model parameter stays frozen.
+  Token ids are append-only, so requests served under the base tokenizer view are
+  bit-for-bit identical to the original model, and a single model instance can
+  serve many tokenizer views with a shared prefix cache.
+keywords:
+  - tokenizer
+  - vocabulary adaptation
+  - multilingual
+  - inference efficiency
+  - conformal prediction
+  - submodular optimization
+license: Apache-2.0
+version: 0.1.0
+date-released: "2026-08-16"

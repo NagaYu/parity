@@ -1,0 +1,15 @@
+# Runtime for the Gradio Space (CPU, tokenizer-only path).
+#
+# The Space measures token cost and shows a pack's certified bounds, all of which
+# are properties of tokenization and of the pack manifest — so it needs no GPU and
+# does not run the model. Keep this list minimal: it is the Space's cold start.
+#
+# For the full toolchain (benchmarks, atlas, figures, tests) install the package
+# extras instead:  pip install -e ".[all]"
+numpy>=1.24
+torch>=2.1
+safetensors>=0.4
+transformers>=4.44
+tokenizers>=0.19
+huggingface_hub>=0.24
+gradio>=4.0

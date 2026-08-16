@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Local caches and run outputs
+.cache/
+runs/
+out/
+packs/
+data/flores/
+figures/*.svg
+figures/*.pdf
+# The README's headline figure is committed; regenerate with
+#   python figures/make_pareto.py runs/latest/results.json figures/pareto.png
+!figures/pareto.png
+build/

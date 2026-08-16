@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "parity-vocab"
+version = "0.1.0"
+description = "Parity: certified vocabulary augmentation without continued pretraining."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Parity contributors" }]
+keywords = ["tokenizer", "vocabulary", "fertility", "multilingual", "inference", "serving"]
+
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.1",
+    "safetensors>=0.4",
+]
+
+[project.optional-dependencies]
+# Everything needed to run against real open-weight models.
+models = ["transformers>=4.44", "tokenizers>=0.19", "huggingface_hub>=0.24"]
+# Corpora + benchmark reporting + figures.
+bench = ["datasets>=2.19", "pandas>=2.0", "matplotlib>=3.7", "scipy>=1.10"]
+# Gradio Space.
+app = ["gradio>=4.0"]
+dev = ["pytest>=7.4", "pytest-timeout>=2.2"]
+all = [
+    "transformers>=4.44", "tokenizers>=0.19", "huggingface_hub>=0.24",
+    "datasets>=2.19", "pandas>=2.0", "matplotlib>=3.7", "scipy>=1.10",
+    "gradio>=4.0", "pytest>=7.4",
+]
+
+[project.scripts]
+parity = "parity.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["parity*", "benchmarks*", "serving*", "scripts*", "figures*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "slow: requires downloading a real open-weight model",
+    "network: requires network access",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
