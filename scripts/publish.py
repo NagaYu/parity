@@ -53,18 +53,26 @@ GITHUB_TOPICS = [
     "nlp",
 ]
 
-#: Files the Space needs. Everything else (benchmarks, tests, figures) stays on
-#: GitHub — a Space repo that carries the whole toolchain just slows its build.
-SPACE_FILES = ["app.py", "requirements.txt", "LICENSE", "parity", "data", "docs"]
+#: The published Space is **static**: it tokenizes in the visitor's browser with
+#: transformers.js and reads a pack's manifest straight from its Model repo.
+#:
+#: Two reasons, in order of importance. Hugging Face only hosts Gradio and Docker
+#: Spaces on paid hardware, and a demo that costs money to keep up is a demo that
+#: eventually goes down. And a static page has no cold start, so the first thing a
+#: visitor sees is their own text tokenized, not a queue.
+#:
+#: ``app.py`` (Gradio) stays in the repository and is the reference
+#: implementation — run it locally, or deploy it if you have paid Space hardware.
+SPACE_FILES = ["LICENSE"]
+SPACE_DIR = "space"
 
 SPACE_FRONTMATTER = """---
 title: Parity
 emoji: ⚖️
 colorFrom: indigo
 colorTo: purple
-sdk: gradio
-sdk_version: 4.44.0
-app_file: app.py
+sdk: static
+app_file: index.html
 pinned: true
 license: apache-2.0
 language:
@@ -80,7 +88,7 @@ tags:
 - multilingual
 - inference-efficiency
 - certified
-short_description: Cut non-English token cost without retraining, with a proven bound on drift.
+short_description: Cut non-English token cost, with a certified bound
 ---
 """
 
@@ -193,26 +201,23 @@ def publish_space(owner: str, name: str, pack_repos: Sequence[str] = (), private
     (staging / "README.md").write_text(card, encoding="utf-8")
     for item in SPACE_FILES:
         src = ROOT / item
-        if not src.exists():
+        if src.exists():
+            shutil.copy2(src, staging / item)
+    for src in sorted((ROOT / SPACE_DIR).iterdir()):
+        if src.name.startswith("."):
             continue
-        dst = staging / item
-        if src.is_dir():
-            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "flores"))
-        else:
-            shutil.copy2(src, dst)
+        shutil.copy2(src, staging / src.name)
 
     repo_id = f"{owner}/{name}"
     if dry:
-        print(f"  would create Space {repo_id} and upload {sorted(p.name for p in staging.iterdir())}")
+        print(f"  would create static Space {repo_id} and upload {sorted(p.name for p in staging.iterdir())}")
         return f"https://huggingface.co/spaces/{repo_id}"
 
     from huggingface_hub import HfApi
 
     api = HfApi()
-    api.create_repo(repo_id, repo_type="space", space_sdk="gradio", private=private, exist_ok=True)
+    api.create_repo(repo_id, repo_type="space", space_sdk="static", private=private, exist_ok=True)
     api.upload_folder(folder_path=str(staging), repo_id=repo_id, repo_type="space")
-    if pack_repos:
-        api.add_space_variable(repo_id=repo_id, key="PARITY_PACK_REPOS", value=",".join(pack_repos))
     return f"https://huggingface.co/spaces/{repo_id}"
 
 

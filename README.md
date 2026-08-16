@@ -27,6 +27,9 @@ parity demo --lang ja                 # whole pipeline, offline, ~3 seconds
 parity build --model Qwen/Qwen2.5-0.5B-Instruct --lang ja --budget 8000
 ```
 
+**Try it without installing anything:** the [Space](https://huggingface.co/spaces/NagaYu/parity)
+tokenizes your own text in your browser and shows what it costs you.
+
 ---
 
 ## The problem, stated precisely
@@ -318,8 +321,16 @@ serving/           vLLM and TGI adapters
 scripts/           build_atlas.py · push_vocab_pack.py
 figures/           make_pareto.py
 tests/             109 tests, fully offline
-app.py             the Gradio Space
+app.py             Gradio app — the reference demo, run locally
+space/             the published static Space (transformers.js, tokenizes in-browser)
 ```
+
+The published Space is **static** rather than Gradio: Hugging Face hosts Gradio Spaces
+only on paid hardware, and a demo that costs money to stay up is a demo that eventually
+goes down. `space/index.html` tokenizes in the visitor's browser with transformers.js and
+reads a pack's manifest straight from its Model repo, so it has no cold start and the
+certificate it displays is the one that shipped. `app.py` is the same demo as a Gradio
+app — run it locally with `python app.py`, or deploy it if you have paid Space hardware.
 
 Every public function's docstring names which claim it substantiates —
 `reduction` / `non-regression` / `bound` / `low-cost` / `infrastructure` — and

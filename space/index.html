@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parity — what your language costs, and how to get it back</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #14161a; --muted: #5b6472; --line: #e3e7ee;
+    --card: #f7f9fc; --accent: #6d3bf5; --accent-soft: #efe9ff;
+    --warm: #b45309; --good: #0f766e; --chip: #eef2f7;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --fg: #e8ecf2; --muted: #9aa4b2; --line: #262b35;
+      --card: #161a21; --accent: #a98bff; --accent-soft: #2a2140;
+      --warm: #f0a755; --good: #4dd4c0; --chip: #1c212a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+          "Hiragino Sans", "Noto Sans", "Noto Sans JP", "Noto Sans Devanagari",
+          "Noto Sans Arabic", "Noto Sans Thai", sans-serif;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  h2 { font-size: 18px; margin: 34px 0 10px; letter-spacing: -0.01em; }
+  .lede { font-size: 17px; color: var(--fg); max-width: 66ch; margin: 0 0 4px; }
+  .sub { color: var(--muted); max-width: 70ch; margin: 8px 0 22px; }
+  a { color: var(--accent); }
+  .links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; margin-bottom: 26px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .controls { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+  textarea {
+    width: 100%; min-height: 84px; resize: vertical; padding: 11px 13px;
+    border: 1px solid var(--line); border-radius: 9px; background: var(--bg);
+    color: var(--fg); font: inherit;
+  }
+  select, button {
+    font: inherit; padding: 9px 12px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg);
+  }
+  button { cursor: pointer; }
+  .side { display: flex; flex-direction: column; gap: 9px; min-width: 220px; }
+  .samples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .samples button { font-size: 12.5px; padding: 5px 9px; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14.5px; }
+  th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .big { font-size: 21px; font-weight: 650; }
+  .accent { color: var(--accent); }
+  .warm { color: var(--warm); }
+  .good { color: var(--good); }
+  .chips { display: flex; flex-wrap: wrap; gap: 3px; margin: 8px 0 2px; }
+  .chip {
+    font-family: var(--mono); font-size: 12.5px; padding: 2px 6px;
+    border-radius: 5px; background: var(--chip); border: 1px solid var(--line);
+    white-space: pre;
+  }
+  .chip.new { background: var(--accent-soft); border-color: var(--accent); }
+  .chip.frag { color: var(--warm); border-style: dashed; }
+  .note { color: var(--muted); font-size: 13px; }
+  .bar { height: 9px; border-radius: 5px; background: var(--chip); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  blockquote {
+    margin: 10px 0; padding: 10px 14px; border-left: 3px solid var(--accent);
+    background: var(--card); border-radius: 0 8px 8px 0;
+  }
+  code { font-family: var(--mono); font-size: 13px; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 12px 14px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  .status { font-size: 13px; color: var(--muted); min-height: 20px; margin: 10px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .controls, .grid2 { grid-template-columns: 1fr; } }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 34px 0; }
+  .foot { color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Parity</h1>
+  <p class="lede"><strong>Your language costs more tokens to say the same thing. That is a
+  property of the tokenizer, not of your language — and it can be fixed without retraining
+  the model.</strong></p>
+  <p class="sub">Type below in your language. This page tokenizes it in your browser and
+  shows what you are charged now, how much of the context window you actually receive, and
+  what a Parity vocabulary pack gives back — with the certified bound on how far the
+  model's behaviour may move.</p>
+  <div class="links">
+    <a href="https://github.com/NagaYu/parity">Code on GitHub</a>
+    <a href="https://huggingface.co/datasets/NagaYu/parity-fertility-atlas">Fertility atlas (Dataset)</a>
+    <a id="packlink" href="https://huggingface.co/NagaYu">Vocabulary packs (Models)</a>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div>
+        <textarea id="text" spellcheck="false">研究者たちはその研究の結果を発表しました。</textarea>
+        <div class="samples" id="samples"></div>
+      </div>
+      <div class="side">
+        <label class="note" for="lang">Language</label>
+        <select id="lang"></select>
+        <label class="note" for="model">Tokenizer</label>
+        <select id="model">
+          <option value="Qwen/Qwen2.5-0.5B-Instruct">Qwen2.5-0.5B-Instruct</option>
+          <option value="HuggingFaceTB/SmolLM2-135M">SmolLM2-135M</option>
+          <option value="meta-llama/Llama-3.2-1B">Llama-3.2-1B</option>
+          <option value="google/gemma-2-2b">Gemma-2-2B</option>
+        </select>
+        <button id="go">Measure</button>
+      </div>
+    </div>
+    <div class="status" id="status">Loading tokenizer…</div>
+  </div>
+
+  <div id="result"></div>
+
+  <h2>Every language, same meaning</h2>
+  <p class="note">Token cost of the same 24 sentences under each tokenizer, from the
+  <a href="https://huggingface.co/datasets/NagaYu/parity-fertility-atlas">fertility atlas</a>
+  (measured on OPUS-100, not on these 24 sentences).</p>
+  <div id="atlas"></div>
+
+  <hr>
+
+  <h2>What Parity actually does</h2>
+  <p>Measuring the imbalance is the easy part, and it is not the point. Parity
+  <em>repairs</em> it: it adds language-specific tokens to an already-trained open-weight
+  model, synthesises their embeddings from the model's own internal representations, and
+  ships a certificate bounding how far behaviour can move.</p>
+
+  <table>
+    <tr><th>Component</th><th style="text-align:left">What it does</th></tr>
+    <tr><td><strong>1. Miner</strong></td><td style="text-align:left">finds frequent base-token n-grams worth a vocabulary slot</td></tr>
+    <tr><td><strong>2. Synthesis</strong></td><td style="text-align:left">subspace Gauss-Newton least squares matching the residual-stream trajectory — <em>no continued pretraining, every weight frozen</em></td></tr>
+    <tr><td><strong>3. Certificate</strong></td><td style="text-align:left">conformal tail bound + empirical-Bernstein + a deterministic Lipschitz bound; candidates over tolerance are not adopted</td></tr>
+    <tr><td><strong>4. Selection</strong></td><td style="text-align:left">submodular max-coverage under the embedding budget, over certified candidates only</td></tr>
+    <tr><td><strong>5. Serving</strong></td><td style="text-align:left">one model instance, many tokenizer views, shared prefix cache</td></tr>
+  </table>
+
+  <p><strong>English stays exactly English.</strong> Packs only <em>append</em> embedding
+  rows and a base-view request cannot see or emit a pack token, so masked-softmax over the
+  base subset equals the original softmax — an identity, not an empirical finding.</p>
+
+  <pre><code>pip install git+https://github.com/NagaYu/parity
+parity build --model Qwen/Qwen2.5-0.5B-Instruct --lang ja --budget 8000</code></pre>
+
+  <h2>Scope</h2>
+  <p class="foot"><strong>Applies to</strong> open-weight models and the providers serving
+  them — Parity needs write access to the embedding matrix.
+  <strong>Does not apply to</strong> closed APIs: you cannot attach a pack to a model you
+  can only reach through someone else's endpoint. If you are a user of such an API, this
+  page can measure what you are being charged; only the provider can fix it.</p>
+
+  <p class="foot">A high ratio above is a property of a tokenizer — an artefact fitted to a
+  corpus that under-represented most of the world's writing systems. It is not a property
+  of any language, and nothing here should be read as saying otherwise. See
+  <a href="https://github.com/NagaYu/parity/blob/main/docs/framing.md">docs/framing.md</a>.
+  To contribute a pack for your language, see
+  <a href="https://github.com/NagaYu/parity/blob/main/docs/contributing-a-pack.md">docs/contributing-a-pack.md</a>.</p>
+
+</div>
+
+<script type="module">
+import { AutoTokenizer, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3";
+env.allowLocalModels = false;
+
+const LANGS = {
+  ja: { name: "Japanese", endonym: "日本語" },
+  hi: { name: "Hindi", endonym: "हिन्दी" },
+  ar: { name: "Arabic", endonym: "العربية" },
+  th: { name: "Thai", endonym: "ไทย" },
+  sw: { name: "Swahili", endonym: "Kiswahili" },
+  en: { name: "English", endonym: "English" },
+};
+const CONTEXT = 128000;
+//: Published Parity packs, by base model. The page fetches the manifest directly
+//: from the Model repo, so the certificate shown here is the one that shipped.
+const PACKS = {
+  "HuggingFaceTB/SmolLM2-135M": "NagaYu/parity-ja-smollm2-135m",
+};
+
+const $ = (id) => document.getElementById(id);
+let SAMPLE = null, ATLAS = null, TOK = null, TOKID = null, PACK = null, TRIE = null;
+
+/* ---------- Parity merge: leftmost-longest over base token ids ---------- */
+function buildTrie(entries) {
+  const root = new Map();
+  for (const e of entries) {
+    let node = root;
+    for (const id of e.candidate.ids) {
+      if (!node.has(id)) node.set(id, new Map());
+      node = node.get(id);
+    }
+    node.set("$", e.new_id);
+  }
+  return root;
+}
+function merge(ids, trie) {
+  // Always the same unit shape, pack or no pack: a caller that has to branch on
+  // the return type is a caller that will forget to.
+  if (!trie) return ids.map((id) => ({ id, len: 1, span: [id] }));
+  const out = [];
+  let i = 0;
+  while (i < ids.length) {
+    let node = trie, best = null, bestLen = 0, j = i;
+    while (j < ids.length && node.has(ids[j])) {
+      node = node.get(ids[j]); j++;
+      if (node.has("$")) { best = node.get("$"); bestLen = j - i; }
+    }
+    if (best !== null) { out.push({ id: best, len: bestLen, span: ids.slice(i, i + bestLen) }); i += bestLen; }
+    else { out.push({ id: ids[i], len: 1, span: [ids[i]] }); i += 1; }
+  }
+  return out;
+}
+
+/* ---------- helpers ---------- */
+const chars = (s) => [...s.normalize("NFC")].filter((c) => !/\s/.test(c)).length;
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// A token that decodes to U+FFFD is a *byte fragment*: the tokenizer split a
+// single character across two or more tokens. That is the phenomenon this page
+// exists to show, so it gets labelled rather than hidden behind a broken glyph.
+function chipHTML(s, isMerged) {
+  const fragment = s.includes("�");
+  const shown = fragment ? "◌byte" : (esc(s).replace(/Ġ|▁/g, "␣").replace(/\n/g, "⏎") || "␣");
+  const cls = `chip${isMerged ? " new" : ""}${fragment ? " frag" : ""}`;
+  const title = fragment ? ' title="byte fragment — this token is only part of a character"' : "";
+  return `<span class="${cls}"${title}>${shown}</span>`;
+}
+
+async function loadTokenizer(id) {
+  if (TOKID === id && TOK) return TOK;
+  $("status").textContent = `Loading ${id} tokenizer in your browser…`;
+  TOK = await AutoTokenizer.from_pretrained(id);
+  TOKID = id;
+  PACK = null; TRIE = null;
+  const repo = PACKS[id];
+  if (repo) {
+    try {
+      const r = await fetch(`https://huggingface.co/${repo}/resolve/main/manifest.json`);
+      if (r.ok) { PACK = await r.json(); TRIE = buildTrie(PACK.entries); }
+    } catch (e) { /* pack is optional */ }
+  }
+  $("packlink").href = repo ? `https://huggingface.co/${repo}` : "https://huggingface.co/NagaYu";
+  $("status").innerHTML = PACK
+    ? `Tokenizer <code>${esc(id)}</code> · pack <a href="https://huggingface.co/${repo}"><code>${esc(repo)}</code></a> (${PACK.n_tokens} tokens) loaded.`
+    : `Tokenizer <code>${esc(id)}</code> loaded. <span class="warm">No published pack for this model yet</span> — showing the baseline only.`;
+  return TOK;
+}
+
+const encode = (t, s) => Array.from(t.encode(s, { add_special_tokens: false }));
+
+function englishEquivalent(lang, text) {
+  const idx = SAMPLE.sentences[lang]?.findIndex((s) => s.normalize("NFC") === text.normalize("NFC"));
+  if (idx !== undefined && idx >= 0) {
+    return { n: encode(TOK, SAMPLE.sentences.en[idx]).length, how: "exact (aligned translation)" };
+  }
+  const enTok = SAMPLE.sentences.en.reduce((a, s) => a + encode(TOK, s).length, 0);
+  const enCh = SAMPLE.sentences.en.reduce((a, s) => a + chars(s), 0);
+  const tgCh = SAMPLE.sentences[lang].reduce((a, s) => a + chars(s), 0);
+  const est = (chars(text) * (enCh / tgCh)) / (enCh / enTok);
+  return { n: Math.max(1, est), how: "estimated from the sample corpus" };
+}
+
+function render(text, lang) {
+  if (!text.trim()) { $("result").innerHTML = ""; return; }
+  const base = encode(TOK, text);
+  const units = merge(base, TRIE);
+  const after = units.length;
+  const eq = englishEquivalent(lang, text);
+  const ratio = base.length / eq.n;
+  const reduction = base.length ? 1 - after / base.length : 0;
+  const ratioAfter = ratio * (1 - reduction);
+  const L = LANGS[lang];
+
+  const dec = (ids) => TOK.decode(ids, { skip_special_tokens: false });
+  const baseChips = base.map((id) => chipHTML(dec([id]), false)).join("");
+  const augChips = units.map((u) => chipHTML(dec(u.span), u.len > 1)).join("");
+  const nFrag = base.filter((id) => dec([id]).includes("�")).length;
+
+  const packRow = PACK ? `
+    <tr>
+      <td>with the <code>${esc(PACK.lang)}</code> pack</td>
+      <td class="big accent">${after}</td>
+      <td class="big accent">${ratioAfter.toFixed(2)}×</td>
+      <td>${Math.round(CONTEXT / ratioAfter).toLocaleString()} <span class="note">(${Math.round(100 / ratioAfter)}%)</span></td>
+    </tr>` : "";
+
+  const headline = PACK ? `
+    <p><span class="big good">−${(100 * reduction).toFixed(1)}% tokens</span> on this input →
+    <strong>${(1 / (1 - reduction)).toFixed(2)}×</strong> more usable context, and the same
+    fraction off the per-message inference bill.</p>
+    <div class="bar"><i style="width:${Math.min(100, 100 * reduction)}%"></i></div>` : `
+    <p class="note">No published pack for this tokenizer yet. Build one:
+    <code>parity build --model ${esc(TOKID)} --lang ${esc(lang)} --budget 8000</code></p>`;
+
+  let cert = "";
+  if (PACK) {
+    const kl = Math.max(...PACK.entries.map((e) => e.certificate.bounds?.kl_next_token?.value ?? 0));
+    const tv = Math.max(...PACK.entries.map((e) => e.certificate.bounds?.tv_next_token?.value ?? 0));
+    const off = Math.max(...PACK.entries.map((e) => e.certificate.bounds?.offcontext_mass?.value ?? 0));
+    const spec = PACK.entries[0]?.certificate?.bounds?.kl_next_token ?? { alpha: 0.05, delta: 0.05 };
+    cert = `
+      <h2>What this pack promises</h2>
+      <blockquote>With probability ≥ ${(1 - spec.delta).toFixed(2)} over the calibration draw, at least
+      ${Math.round(100 * (1 - spec.alpha))}% of inputs from the calibration distribution move the
+      next-token distribution by at most <strong>${kl.toPrecision(3)} nats</strong> (KL) and
+      <strong>${tv.toPrecision(3)}</strong> (total variation) — for every one of the
+      ${PACK.n_tokens} tokens in this pack.</blockquote>
+      <ul>
+        <li>Off-context firing ≤ <strong>${off.toPrecision(3)}</strong> probability where the token does not belong.</li>
+        <li><strong>English and every other language: exactly unchanged.</strong> Packs only append
+        embedding rows, and a base-view request cannot see or emit a pack token.</li>
+        <li>Not covered: adversarial prompts, and domains far from the calibration corpus. These are
+        finite-sample, distribution-free bounds — not worst-case ones.</li>
+      </ul>
+      <p class="note">Build cost ${esc(String(PACK.metadata?.build_flops ?? "n/a"))} FLOPs, no continued pretraining.
+      Base model <code>${esc(PACK.base_model_id)}</code>.</p>`;
+  }
+
+  $("result").innerHTML = `
+    <h2>${L.endonym} <span class="note">(${L.name})</span></h2>
+    <table>
+      <tr><th></th><th>tokens</th><th>vs. English</th><th>effective 128k window</th></tr>
+      <tr>
+        <td>now</td>
+        <td class="big">${base.length}</td>
+        <td class="big warm">${ratio.toFixed(2)}×</td>
+        <td>${Math.round(CONTEXT / ratio).toLocaleString()} <span class="note">(${Math.round(100 / ratio)}%)</span></td>
+      </tr>
+      ${packRow}
+    </table>
+    ${headline}
+    <p class="note">${chars(text)} characters · English-equivalent length ${eq.how}.</p>
+    <h2>The tokens</h2>
+    <p class="note">Original tokenizer — ${base.length} tokens${nFrag ? ` · <span class="warm">${nFrag} of them are byte fragments</span> (<span class="chip frag">◌byte</span>), not even whole characters` : ""}</p>
+    <div class="chips">${baseChips}</div>
+    ${PACK ? `<p class="note" style="margin-top:14px">With the pack — ${after} tokens
+      <span class="accent">(purple = one Parity token replacing several)</span></p>
+      <div class="chips">${augChips}</div>` : ""}
+    ${cert}`;
+}
+
+function renderAtlas() {
+  const toks = [...new Set(ATLAS.map((r) => r.tokenizer_id))];
+  const langs = [...new Set(ATLAS.map((r) => r.lang))];
+  const get = (t, l) => ATLAS.find((r) => r.tokenizer_id === t && r.lang === l);
+  const rows = langs
+    .map((l) => ({ l, v: toks.map((t) => get(t, l)?.parity_ratio ?? null) }))
+    .filter((r) => r.v.some((x) => x !== null))
+    .sort((a, b) => (b.v[0] ?? 0) - (a.v[0] ?? 0));
+  const head = toks.map((t) => `<th>${esc(t.split("/").pop())}</th>`).join("");
+  const body = rows.map((r) => `<tr><td>${esc(r.l)}</td>${
+    r.v.map((x) => x === null ? "<td>—</td>" :
+      `<td class="${x > 2 ? "warm" : x < 1.05 ? "good" : ""}">${x.toFixed(2)}×</td>`).join("")
+  }</tr>`).join("");
+  $("atlas").innerHTML = `<table><tr><th>language</th>${head}</tr>${body}</table>
+    <p class="note">Chinese costs Qwen2.5 <em>less</em> than English, and the same language moves
+    by 3–5× between two tokenizers of similar size. The variable is the tokenizer's training
+    corpus, and nothing else.</p>`;
+}
+
+/* ---------- wiring ---------- */
+async function boot() {
+  [SAMPLE, ATLAS] = await Promise.all([
+    fetch("sample.json").then((r) => r.json()),
+    fetch("atlas.json").then((r) => r.json()),
+  ]);
+  $("lang").innerHTML = Object.entries(LANGS)
+    .map(([k, v]) => `<option value="${k}"${k === "ja" ? " selected" : ""}>${v.endonym} — ${v.name}</option>`).join("");
+  $("samples").innerHTML = Object.keys(LANGS)
+    .map((k) => `<button data-lang="${k}">${LANGS[k].endonym}</button>`).join("");
+  $("samples").addEventListener("click", (e) => {
+    const l = e.target.dataset?.lang;
+    if (!l) return;
+    $("lang").value = l;
+    $("text").value = SAMPLE.sentences[l][3];
+    update();
+  });
+  renderAtlas();
+  await loadTokenizer($("model").value);
+  update();
+}
+async function update() {
+  try {
+    await loadTokenizer($("model").value);
+    render($("text").value, $("lang").value);
+  } catch (err) {
+    $("status").innerHTML = `<span class="warm">Could not load that tokenizer: ${esc(String(err.message || err))}</span>`;
+  }
+}
+$("go").addEventListener("click", update);
+$("model").addEventListener("change", update);
+$("lang").addEventListener("change", update);
+let t; $("text").addEventListener("input", () => { clearTimeout(t); t = setTimeout(update, 350); });
+boot();
+</script>
+</body>
+</html>

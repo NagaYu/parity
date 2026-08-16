@@ -74,7 +74,7 @@ fitted to a corpus; the corpora used to fit today's tokenizers under-represent
 most of the world's writing systems, and the ratios below are the arithmetic
 consequence. Nothing here says any language is inefficient, verbose, or harder
 to model. The measurement is of an engineering artefact, and the artefact is
-repairable — that is what the [Parity](https://github.com/) repository is for.
+repairable — that is what the [Parity](https://github.com/NagaYu/parity) repository is for.
 
 ## Reproducing
 
@@ -84,6 +84,17 @@ python scripts/build_atlas.py --tokenizers {tokenizers} --langs {langs}
 
 Rows are produced by `parity.fertility.measure_fertility` on {n} aligned
 sentences from {corpus}.
+
+Web-mined corpora are cleaned first (`parity.corpora.clean_bitext`) — badly aligned
+pairs otherwise dominate a corpus-level ratio. Both the corpus ratio and the
+per-sentence median are given so surviving noise is visible rather than implied.
+
+## The repair
+
+A high ratio here is fixable without retraining the model: see
+[`parity build`](https://github.com/NagaYu/parity) and the
+[demo Space](https://huggingface.co/spaces/NagaYu/parity). Measurement is the
+smallest part of that project; the reduction and its certified bound are the point.
 """
 
 
