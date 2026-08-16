@@ -49,11 +49,11 @@ Measured on OPUS-100 (`scripts/build_atlas.py`, full table in the
 | Tamil தமிழ் | **6.28x** | 20k (16%) | 9.57x |
 | Telugu తెలుగు | **5.83x** | 22k (17%) | 10.04x |
 | Bengali বাংলা | **5.10x** | 25k (20%) | 8.50x |
-| Hindi हिन्दी | **4.27x** | 30k (23%) | 8.28x |
+| Hindi हिन्दी | **4.27x** | 30k (23%) | 4.91x |
 | Amharic አማርኛ | **3.77x** | 34k (27%) | 6.57x |
 | Thai ไทย | **1.99x** | 64k (50%) | 6.23x |
-| Japanese 日本語 | **1.22x** | 105k (82%) | 3.90x |
-| Chinese 中文 | **0.92x** | 139k (109%) | 3.44x |
+| Japanese 日本語 | **1.22x** | 105k (82%) | 2.98x |
+| Chinese 中文 | **0.92x** | 139k (109%) | 2.37x |
 | English | 1.00x | 128k (100%) | 1.00x |
 
 Two things this table makes hard to misread. Chinese costs Qwen2.5 *less* than
